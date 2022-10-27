@@ -154,10 +154,15 @@ ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
   geom_point(aes(colour=drv))
   
 #3.7 Statistical transformations
+# bar charts, histograms, and frequency polygons bin your data and then plot bin counts, the number of points that fall in each bin.
+# smoothers fit a model to your data and then plot predictions from the model.
+# boxplots compute a robust summary of the distribution and then display a specially formatted box.
+
 ggplot(data = diamonds) + 
-  geom_bar(mapping = aes(x = cut))
+  geom_bar(mapping = aes(x = cut)) # geom_bar uses stat_count
 ggplot(data = diamonds) + 
-  stat_count(mapping = aes(x = cut))
+  stat_count(mapping = aes(x = cut)) # using stat_count instead of geom gives the same result
+
 demo <- tribble(
   ~cut,         ~freq,
   "Fair",       1610,
@@ -167,20 +172,100 @@ demo <- tribble(
   "Ideal",      21551
 )
 ggplot(data = demo) +
-  geom_bar(mapping = aes(x = cut, y = freq), stat = "identity")
+  geom_bar(mapping = aes(x = cut, y = freq), stat = "identity") #default stat can be overridden
 ggplot(data = diamonds) + 
   geom_bar(mapping = aes(x = cut, y = stat(prop), group = 1))
 ggplot(data = diamonds) + 
   stat_summary(mapping = aes(x = cut, y = depth), fun.min = min, fun.max = max, fun = median)
+
 #3.7.1
 ?stat_summary #geom = pointrange
+ggplot(data = diamonds) + 
+  geom_pointrange(mapping = aes(x = cut, y = depth), stat = "summary")
 ?geom_col # different stat than geom_bar
 ?geom_bar
-?stat_smooth
+?stat_smooth # computes y/x: predicted value, ymin/xmin: lower pointwise CI of the mean, ymax/xmax: upper pointwise CI of the mean, SE
 ggplot(data = diamonds) + 
-  geom_bar(mapping = aes(x = cut, y = after_stat(prop), group = 1))#total needs to be 1
+  geom_bar(mapping = aes(x = cut, y = after_stat(prop), group = 1)) # total needs to be 1
 ggplot(data = diamonds) + 
   geom_bar(mapping = aes(x = cut, y = (after_stat(count))/(sum(after_stat(count))), fill = color))
 
 #3.8 Position adjustments
            
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, colour = cut)) #omtrek gekleurd
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = cut)) #coloured bars
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity)) #stacked coloured bars
+# to change stacking, change  position through position adjustment
+# position = identity
+ggplot(data = diamonds, mapping = aes(x = cut, fill = clarity)) + 
+  geom_bar(alpha = 1/5, position = "identity") #identity places object where it falls in the context of graph -> useful for 2d plots, otherwise overlapping
+ggplot(data = diamonds, mapping = aes(x = cut, colour = clarity)) + 
+  geom_bar(fill = NA, position = "identity") 
+# position = fill
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "fill") #each bar same height
+# position = dodge, places overlapping objects beside each other
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "dodge")
+# position = jitter, adds noise to prevent overplotting (points plotted on the same position, making them invisible)
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), position = "jitter")
+
+#3.8.1
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point(position = "jitter") # add jitter
+?geom_jitter # amount of jittering adjusted by parameters width and height
+?geom_count # Produces datapoints with sizes related to counts
+?geom_boxplot # default position adjustment is dodge2, thus only changes width, not height
+
+#3.9 Coordinate systems
+ggplot(data = mpg, mapping = aes(x = class, y = hwy)) + 
+  geom_boxplot()
+ggplot(data = mpg, mapping = aes(x = class, y = hwy)) + 
+  geom_boxplot() +
+  coord_flip() # flips x and y axes
+
+nz <- map_data("nz")
+ggplot(nz, aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black")
+ggplot(nz, aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black") +
+  coord_quickmap() #sets aspect ratio for maps, when plotting spatial data
+
+bar <- ggplot(data = diamonds) + 
+  geom_bar(
+    mapping = aes(x = cut, fill = cut), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+bar + coord_flip()
+bar + coord_polar() # uses polar coordinates, combo of bar chart and coxcomb chart
+
+#3.9.1
+ggplot(mpg, aes(x = factor(1), fill = drv)) +
+  geom_bar(width = 1) +
+  coord_polar(theta = "y") # theta determines map angle x or y
+?coord_polar # it is also possible to change starting point (not 12 o'clock), direction clockwise or anticlockwise, or clipping
+?coord_map # more extended version of coord_quickmap which projects spherical earth on 2d plane, does not preserve straight lines compared to coord_quickmap
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() + #is the diagonal line
+  coord_fixed() # fixes ratio of axes
+?coord_fixed
+
+#3.10 Layered grammar of ggplot
+
+# ggplot(data = <DATA>) + 
+#   <GEOM_FUNCTION>(
+#     mapping = aes(<MAPPINGS>),
+#     stat = <STAT>, 
+#     position = <POSITION>
+#   ) +
+#   <COORDINATE_FUNCTION> +
+#   <FACET_FUNCTION>
